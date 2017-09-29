@@ -20,5 +20,20 @@
 }
 
 .App-intro {
-  font-size: large;
+  text-align: left;
+}
+
+#MixedInput {
+  margin: 20px;
+  width: 400px;
+  height: 400px;
+}
+
+#OutputContent {
+  margin: 20px;
+}
+
+#VisualizeButton {
+  margin: 20px;
+  display: block;
 }

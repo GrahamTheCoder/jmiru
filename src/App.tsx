@@ -1,18 +1,47 @@
 import * as React from 'react';
 import './App.css';
+import { getHtmlFormattedOutput } from './ts/view';
 
-class App extends React.Component {
+interface AppState {
+  MixedInput: string;
+  OutputContent: string;
+}
+
+class App extends React.Component<{}, AppState> {
+  constructor(props: {}) {
+    super(props);
+    this.state = {
+      MixedInput: 'C     F     G\nここで書きてください\nkoko de kakite kudasai\nwrite here please',
+      OutputContent: ''
+    };
+    this.handleMixedInputChanged = this.handleMixedInputChanged.bind(this);
+    this.handleGenerateClicked = this.handleGenerateClicked.bind(this);
+  }
+  
+  handleMixedInputChanged(event: React.ChangeEvent<HTMLTextAreaElement>) {
+    this.setState({MixedInput: event.target.value});
+  }
+  
+  handleGenerateClicked() {
+    const outputContent = getHtmlFormattedOutput(this.state.MixedInput);
+    this.setState({OutputContent: outputContent});
+  }
+
   render() {
     return (
       <div className="App">
         <div className="App-header">
           <h2><span className="App-logo">見</span><span className="App-title">Welcome to JMiru</span></h2>
         </div>
-        <p className="App-intro">
-          
-        </p>
-      </div>
-    );
+        <div className="App-intro">
+          <div id="OutputContent" dangerouslySetInnerHTML={{__html: this.state.OutputContent}}/>
+          <form id="MixedInputForm">
+            <textarea id="MixedInput" onChange={this.handleMixedInputChanged} value={this.state.MixedInput}/>
+            <input id="VisualizeButton" type="button" value="Visualize" onClick={this.handleGenerateClicked} />
+        </form>
+        </div>
+        </div>
+        );
   }
 }
 
