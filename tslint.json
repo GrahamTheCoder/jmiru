@@ -22,12 +22,12 @@
         "jsx-no-lambda": false,
         "jsx-no-multiline-js": false,
         "label-position": true,
-        "max-line-length": [ true, 120 ],
+        "max-line-length": [ true, 160 ],
         "member-ordering": [
             true,
-            "public-before-private",
+            ["public-before-private",
             "static-before-instance",
-            "variables-before-functions"
+            "variables-before-functions"]
         ],
         "no-any": true,
         "no-arg": true,
