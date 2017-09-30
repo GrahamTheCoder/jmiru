@@ -15,6 +15,9 @@ declare module 'wanakana' {
     /** Returns false if string contains characters outside of the kana family, otherwise true. */
     function isKana(str: string): boolean;
 
+    /** Return true if input only includes Kanji, Kana, zenkaku punctuation, japanese symbols and numbers. */
+    function isJapanese(str: string): boolean;
+    
     /** Returns false if string contains characters outside of the kanji family, otherwise true. */
     function isKanji(str: string): boolean;
 
