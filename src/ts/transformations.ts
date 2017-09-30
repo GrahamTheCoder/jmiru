@@ -1,14 +1,32 @@
 import { isKanji, isKana, isRomaji, isJapanese, toHiragana } from 'wanakana';
 
-interface LineInfo {
-    romajiLine: string;
-    musicChordLine: string;
-    kanaLine: string;
-    kanjiLine: string;
-    unclassifiedLines: string[];
+// Index into this with LineType - todo: think of way to tie things together with strong types
+class LineInfo {
+    constructor() {
+        this[LineType.Unclassified] = [];
+        }
 }
 
-type FindClassifier<T> = (input: T, index: number, array: T[]) => boolean;
+enum LineType {
+    Unclassified = 0,
+    Kanji,
+    Kana,
+    Music,
+    Romaji
+}
+
+const classifiers = new Map<LineType, (line: string) => boolean>([
+    [LineType.Kanji, isKanjiLine],
+    [LineType.Kana, isKana],
+    [LineType.Music, isMusicChordLine],
+    [LineType.Romaji, isRomajiLine],
+    [LineType.Unclassified, (x: string) => true]
+]);
+
+function isLineType(line: string, lineType: LineType) {
+    const classifier = classifiers.get(lineType);
+    return classifier !== undefined && classifier(line);
+}
 
 function removeSpacesAndPunctuation(str: string) {
     return str.replace(/[\s'!"#$%&\\'()\*+,\-\.\/:;<=>?@\[\\\]\^_`{|}~']/g, '');
@@ -34,29 +52,53 @@ function isKanjiLine(line: string) {
     return line.split('').some(isKanji);
 }
 
-function findEachEntryOnce<T>(f: FindClassifier<T>, usedEntryIndexes: number[]) {
-    return (input: T, index: number, array: T[]) => {
-        const isNewMatch = !usedEntryIndexes.includes(index) && f(input, index, array);
-        if (isNewMatch) {
-            usedEntryIndexes.push(index);
-        }
-        return isNewMatch;
-    };
+function classifyLine(line: string) {
+    const lineTypes = [LineType.Kanji, LineType.Kana, LineType.Music, LineType.Romaji];
+    return {line: line, type: lineTypes.find(lt => isLineType(line, lt)) || LineType.Unclassified};    
 }
 
-function createLineInfoFromChunkLines(chunkLines: string[]): LineInfo {
-    const classifiers = [isKanjiLine, isKana, isMusicChordLine, isRomajiLine];
-    const usedLineIndexes = new Array();
-    const classified = classifiers
-        .map(classify => findEachEntryOnce(classify, usedLineIndexes))
-        .map(classifyOnce => chunkLines.find(classifyOnce) || '');
-    const unclassified = chunkLines.filter((cur, index) => !usedLineIndexes.includes(index));
-    return { kanjiLine: classified[0], kanaLine: classified[1], musicChordLine: classified[2], romajiLine: classified[3], unclassifiedLines: unclassified };
+function getChunkLineInfos(chunkLines: string[]): LineInfo[] {
+    const classifiedLines = chunkLines.map(classifyLine);
+    let currentLineInfo = new LineInfo();
+    const lineInfos: LineInfo[] = [currentLineInfo];
+    classifiedLines.forEach(({line, type}) => {
+        if (currentLineInfo[type] !== undefined && type !== LineType.Unclassified) {
+            lineInfos.push(currentLineInfo = new LineInfo());
+        }
+
+        if (type === LineType.Unclassified) {
+            currentLineInfo[LineType.Unclassified].push(line);
+        } else {
+            currentLineInfo[type] = line;
+        }        
+    });
+
+    return lineInfos;
+}
+
+function flattenNestedArray<T>(first: T[], second: T[]) {
+    if (first.length * 10 > second.length * 9 && first.length * 9 < second.length * 10
+    && first[0]) {
+
+    }
+    return first.concat([]);
+  }
+
+// Deal with the case of a full text in english then a full text in japanese for example
+function mergeChunks(chunkLineInfos: LineInfo[][]) {
+    // Todo: match up adjacent chunks of similar sizes and merge their line infos to 
+    return chunkLineInfos.reduce(flattenNestedArray, []);
+}
+
+function createLineInfoFromChunkLines(chunks: string[]): LineInfo[] {
+    const chunkLineInfos = chunks.map(chunk => getChunkLineInfos(chunk.split('\n')));
+    return mergeChunks(chunkLineInfos);
+
 }
 
 function furiganaOutputFromLineInfo(lineInfos: LineInfo[]) {
     const outputChunks = lineInfos.map(lineInfo => 
-        [lineInfo.musicChordLine, lineInfo.kanjiLine, toHiragana(lineInfo.romajiLine), lineInfo.unclassifiedLines.join('\n')]
+        [lineInfo[LineType.Music], lineInfo[LineType.Kanji], toHiragana(lineInfo[LineType.Romaji]), lineInfo[LineType.Unclassified].join('\n')]
         .filter(x => x !== undefined && x !== '').join('\n')
     );
     return outputChunks;

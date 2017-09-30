@@ -1,20 +1,19 @@
 import { createLineInfoFromChunkLines, furiganaOutputFromLineInfo } from './transformations';
 
-function lineInfoFromFreeInput(inputText: string) {
-    const multiLangChunks = inputText.split('\n\n');
-    const chunkLinesArray = multiLangChunks.map(chunkText => chunkText.split('\n'));
-    return chunkLinesArray.map(createLineInfoFromChunkLines);
+function lineInfoFromFreeInput(inputText: string, chunkDivider: string) {
+    const multiLangChunks = inputText.split(chunkDivider);
+    return createLineInfoFromChunkLines(multiLangChunks);
 }
 
-function formatAsHtml(outputChunks: string[]) {
-    return outputChunks.join('\n\n')
+function formatAsHtml(output: string[]) {
+    return output.join('\n')
     .replace(/\t/g, '    ')
     .replace(/  /g, ' &nbsp;')
     .replace(/\r\n|\n|\r/g, '<br />');
 }
 
-function getHtmlFormattedOutput(freeTextInput: string): string {
-    return formatAsHtml(furiganaOutputFromLineInfo(lineInfoFromFreeInput(freeTextInput)));
+function getHtmlFormattedOutput(freeTextInput: string, chunkDivider: string): string {
+    return formatAsHtml(furiganaOutputFromLineInfo(lineInfoFromFreeInput(freeTextInput, chunkDivider)));
 }
 
 export {getHtmlFormattedOutput};

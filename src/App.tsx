@@ -5,6 +5,7 @@ import { getHtmlFormattedOutput } from './ts/view';
 interface AppState {
   MixedInput: string;
   OutputContent: string;
+  ChunkDivider: string;
 }
 
 class App extends React.Component<{}, AppState> {
@@ -12,7 +13,8 @@ class App extends React.Component<{}, AppState> {
     super(props);
     this.state = {
       MixedInput: 'C     F     G\nここで書きてください\nkoko de kakite kudasai\nwrite here please',
-      OutputContent: ''
+      OutputContent: '',
+      ChunkDivider: '\n\n' // Divider in line by line formats (e.g. romaji-lines, double-newline-divider, corresponding-english-lines)
     };
     this.handleMixedInputChanged = this.handleMixedInputChanged.bind(this);
     this.handleGenerateClicked = this.handleGenerateClicked.bind(this);
@@ -23,7 +25,7 @@ class App extends React.Component<{}, AppState> {
   }
   
   handleGenerateClicked() {
-    const outputContent = getHtmlFormattedOutput(this.state.MixedInput);
+    const outputContent = getHtmlFormattedOutput(this.state.MixedInput, this.state.ChunkDivider);
     this.setState({OutputContent: outputContent});
   }
 
