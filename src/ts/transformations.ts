@@ -1,18 +1,31 @@
 import { isKanji, isKana, isRomaji, isJapanese, toHiragana } from 'wanakana';
 
-// Index into this with LineType - todo: think of way to tie things together with strong types
-class LineInfo {
-    constructor() {
-        this[LineType.Unclassified] = [];
-        }
-}
-
 enum LineType {
     Unclassified = 0,
     Kanji,
     Kana,
     Music,
     Romaji
+}
+
+const classifiedLineTypesByImportance = [LineType.Kanji, LineType.Kana, LineType.Music, LineType.Romaji];
+const allLineTypes = classifiedLineTypesByImportance.concat([LineType.Unclassified]);
+// Index into this with LineType - todo: think of way to tie things together with strong types
+class LineInfo {
+    constructor() {
+        this[LineType.Unclassified] = [];
+    }
+    
+    public isDefined(t: LineType) {
+        return this[t] !== undefined && this[t].length > 0;
+    }
+    public areDefined() {
+        return allLineTypes.filter(t => this.isDefined(t));
+    }
+
+    public notDefined() {
+        return allLineTypes.filter(t => !this.isDefined(t));
+    }
 }
 
 const classifiers = new Map<LineType, (line: string) => boolean>([
@@ -53,8 +66,7 @@ function isKanjiLine(line: string) {
 }
 
 function classifyLine(line: string) {
-    const lineTypes = [LineType.Kanji, LineType.Kana, LineType.Music, LineType.Romaji];
-    return {line: line, type: lineTypes.find(lt => isLineType(line, lt)) || LineType.Unclassified};    
+    return {line: line, type: classifiedLineTypesByImportance.find(lt => isLineType(line, lt)) || LineType.Unclassified};    
 }
 
 function getChunkLineInfos(chunkLines: string[]): LineInfo[] {
@@ -62,7 +74,7 @@ function getChunkLineInfos(chunkLines: string[]): LineInfo[] {
     let currentLineInfo = new LineInfo();
     const lineInfos: LineInfo[] = [currentLineInfo];
     classifiedLines.forEach(({line, type}) => {
-        if (currentLineInfo[type] !== undefined && type !== LineType.Unclassified) {
+        if (currentLineInfo.isDefined(type)) {
             lineInfos.push(currentLineInfo = new LineInfo());
         }
 
@@ -76,18 +88,35 @@ function getChunkLineInfos(chunkLines: string[]): LineInfo[] {
     return lineInfos;
 }
 
-function flattenNestedArray<T>(first: T[], second: T[]) {
-    if (first.length * 10 > second.length * 9 && first.length * 9 < second.length * 10
-    && first[0]) {
+function averageLineMatches<T>(array: T[], predicate: ((t: T) => boolean)) {
+    return array.filter(predicate).length > array.length / 2;
+}
 
+function merge(first: LineInfo[], second: LineInfo[]) {
+    const notDefinedInFirstOnAverage = allLineTypes.filter(type => averageLineMatches(first, l => l.notDefined().includes(type)));
+    const definedInSecondOnAverage = allLineTypes.filter(type => averageLineMatches(second, l => l.areDefined().includes(type)));
+    if (notDefinedInFirstOnAverage.some(missingFromFirst => definedInSecondOnAverage.includes(missingFromFirst))) {
+    return first.map(function(firstLine: LineInfo, index: number) {
+        const secondLine = second[index];
+        if (secondLine === undefined) {
+            return firstLine;
+        }
+        
+        const li = new LineInfo();
+        li[LineType.Unclassified] = firstLine[LineType.Unclassified].concat(secondLine[LineType.Unclassified]);
+        classifiedLineTypesByImportance.forEach(lineType => {
+            li[lineType] = [firstLine, secondLine].filter(x => x.isDefined(lineType)).map(x => x[lineType]).join('\n');
+        });
+        return li;
+      }).concat(second.slice(first.length));
+    } else {
+        return first.concat(second);
     }
-    return first.concat([]);
   }
 
-// Deal with the case of a full text in english then a full text in japanese for example
+// Deal with more complex cases like guitar chords with english followed by a full text in kanji and kana
 function mergeChunks(chunkLineInfos: LineInfo[][]) {
-    // Todo: match up adjacent chunks of similar sizes and merge their line infos to 
-    return chunkLineInfos.reduce(flattenNestedArray, []);
+    return chunkLineInfos.reduce(merge, []);
 }
 
 function createLineInfoFromChunkLines(chunks: string[]): LineInfo[] {
@@ -99,7 +128,7 @@ function createLineInfoFromChunkLines(chunks: string[]): LineInfo[] {
 function furiganaOutputFromLineInfo(lineInfos: LineInfo[]) {
     const outputChunks = lineInfos.map(lineInfo => 
         [lineInfo[LineType.Music], lineInfo[LineType.Kanji], toHiragana(lineInfo[LineType.Romaji]), lineInfo[LineType.Unclassified].join('\n')]
-        .filter(x => x !== undefined && x !== '').join('\n')
+        .filter(x => x !== undefined && x.length > 0).join('\n')
     );
     return outputChunks;
 }
