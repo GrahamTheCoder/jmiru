@@ -1,4 +1,5 @@
-#JMiru
+# JMiru
+
 Use case: As a learner of Japanese, I want to see Japanese text (e.g. song lyrics/chords) as Kanji with furigana, and avoid romaji at all costs.
 This project aims to help people pull together Japanese to visualize in a convenient way for them.
 
@@ -19,5 +20,7 @@ In the past I've used [たとえば](https://tatoeba.org/eng/tools/furigana) to 
 For details of how to develop on this project see [development](Development.md)
 
 ## FAQ
+
 Q: Why does this project use React?
+
 A: It doesn't currently *need* any framework or libraries, but I think it'll be a good underpinning if the project makes good progress.
