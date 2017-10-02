@@ -24,3 +24,11 @@ For details of how to develop on this project see [development](Development.md)
 Q: Why does this project use React?
 
 A: It doesn't currently *need* any framework or libraries, but I think it'll be a good underpinning if the project makes good progress.
+
+Q: Why the name?
+
+A: Pick your favourites out of:
+* It's a memorable shortening of "Japanese 見る目(みるめ)" i.e. Japanese way of looking at things.
+* It's a concise translation of "see Japanese"
+* The pronunciation sounds a bit like "J mirror" - everyone knows you should practice in front of the J mirror.
+* It doesn't have many Google search results
