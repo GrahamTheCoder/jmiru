@@ -19,31 +19,34 @@ class App extends React.Component<{}, AppState> {
     this.handleMixedInputChanged = this.handleMixedInputChanged.bind(this);
     this.handleGenerateClicked = this.handleGenerateClicked.bind(this);
   }
-  
+
   handleMixedInputChanged(event: React.ChangeEvent<HTMLTextAreaElement>) {
-    this.setState({MixedInput: event.target.value});
+    this.setState({ MixedInput: event.target.value });
   }
-  
+
   handleGenerateClicked() {
     const outputContent = getHtmlFormattedOutput(this.state.MixedInput, this.state.ChunkDivider);
-    this.setState({OutputContent: outputContent});
+    this.setState({ OutputContent: outputContent });
   }
 
   render() {
     return (
       <div className="App">
         <div className="App-header">
-          <h2><span className="App-logo">見</span><span className="App-title">Welcome to JMiru</span></h2>
+          <h2>
+            <span className="App-logo">見</span>
+            <span className="App-title">Welcome to JMiru</span>
+          </h2>
         </div>
         <div className="App-intro">
-          <div id="OutputContent" dangerouslySetInnerHTML={{__html: this.state.OutputContent}}/>
+          <div id="OutputContent" dangerouslySetInnerHTML={{ __html: this.state.OutputContent }} />
           <form id="MixedInputForm">
-            <textarea id="MixedInput" onChange={this.handleMixedInputChanged} value={this.state.MixedInput}/>
+            <textarea id="MixedInput" onChange={this.handleMixedInputChanged} value={this.state.MixedInput} />
             <input id="VisualizeButton" type="button" value="Visualize" onClick={this.handleGenerateClicked} />
-        </form>
+          </form>
         </div>
-        </div>
-        );
+      </div>
+    );
   }
 }
 
