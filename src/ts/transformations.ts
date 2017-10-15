@@ -32,7 +32,7 @@ const classifiers = new Map<LineType, (line: string) => boolean>([
   [LineType.Kanji, isKanjiLine],
   [LineType.Kana, isKana],
   [LineType.Music, isMusicChordLine],
-  [LineType.Romaji, isRomajiLine],
+  [LineType.Romaji, isRomajiOrMixedLine],
   [LineType.Unclassified, (x: string) => true]
 ]);
 
@@ -41,8 +41,8 @@ function isLineType(line: string, lineType: LineType) {
   return classifier !== undefined && classifier(line);
 }
 
-function removeSpacesAndPunctuation(str: string) {
-  return str.replace(/[\s'!"#$%&\\'()\*+,\-\.\/:;<=>?@\[\\\]\^_`{|}~']/g, '');
+function perWordTrimPunctuation(str: string) {
+  return str.replace(/\b['!"#$%&\\'()\*+,\-\.\/:;<=>?@\[\\\]\^_`{|}~']+\B|\B['!"#$%&\\'()\*+,\-\.\/:;<=>?@\[\\\]\^_`{|}~']+\b/g, '');
 }
 
 function isMusicChordLine(line: string) {
@@ -58,20 +58,35 @@ function isMusicChordLine(line: string) {
   );
 }
 
-function mostWordsAreJapanese(line: string) {
-  if (isJapanese(line)) { return true; }
-  const words = toHiragana(line).split(' ');
-  const jWords = words.filter(w => isJapaneseLine(w));
-  return jWords.length * 2 > words.length;
+function isMostlyRomaji(line: string) {
+  const words = toHiraganaLine(perWordTrimPunctuation(line)).split(' ').filter(word => perWordTrimPunctuation(word).trim() !== '');
+  const convertedWords = words.map(w => isJapaneseLine(w));
+
+  const wordRuns: {state: boolean, count: number}[] = [];
+  let currentRun = {state: convertedWords[0], count: 0};
+  convertedWords.forEach((w, i) => {
+    if (w === currentRun.state) {
+      currentRun.count++;
+    } else if (currentRun.count < 3 && currentRun.state === true) {
+      const resurrectedRun = wordRuns.pop() || {state: w, count: 0};
+      resurrectedRun.count += currentRun.count + 1;
+      currentRun = resurrectedRun;
+    } else {
+      wordRuns.push(currentRun);
+      currentRun = {state: w, count: 1};
+    }
+  });
+  wordRuns.push(currentRun);
+
+  // A line counts as Japanese if it changes language twice and half its words are Japanese
+  const jWords = wordRuns.filter(r => r.state === true).reduce((prev, curr) => prev + curr.count, 0);
+  const nonJWords = wordRuns.filter(r => r.state === false).reduce((prev, curr) => prev + curr.count, 0);
+  return wordRuns.length <= 2 && jWords > nonJWords;
 }
 
-/**
- * Requires more than half the words to be romaji to allow for mixed language lines
- * @param line 
- */
-function isRomajiLine(line: string) {
+function isRomajiOrMixedLine(line: string) {
   // isRomaji checks individual characters quickly, so the second check ensures that when converted, the line makes valid Japanese
-  return isRomaji(line) && mostWordsAreJapanese(line);
+  return isRomaji(line) && isMostlyRomaji(line);
 }
 
 /**
@@ -80,11 +95,11 @@ function isRomajiLine(line: string) {
 function toHiraganaLine(line: string) {
   if (!line) { return line; }
   return line.split(' ')
-    .map(w => [w, toHiragana(w)]).map(([w, jw]) => isJapaneseLine(jw) && !w.includes('l') ? jw : w).join(' ');
+    .map(w => [w, toHiragana(w)]).map(([w, jw]) => isJapaneseLine(jw) && !w.includes('l') && !w.includes('ti') ? jw : w).join(' ');
 }
 
 function isJapaneseLine(line: string) {
-  return isJapanese(removeSpacesAndPunctuation(line));
+  return isJapanese(perWordTrimPunctuation(line));
 }
 
 function isKanjiLine(line: string) {
