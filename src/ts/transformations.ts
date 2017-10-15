@@ -58,9 +58,33 @@ function isMusicChordLine(line: string) {
   );
 }
 
+function mostWordsAreJapanese(line: string) {
+  if (isJapanese(line)) { return true; }
+  const words = toHiragana(line).split(' ');
+  const jWords = words.filter(w => isJapaneseLine(w));
+  return jWords.length * 2 > words.length;
+}
+
+/**
+ * Requires more than half the words to be romaji to allow for mixed language lines
+ * @param line 
+ */
 function isRomajiLine(line: string) {
   // isRomaji checks individual characters quickly, so the second check ensures that when converted, the line makes valid Japanese
-  return isRomaji(line) && isJapanese(removeSpacesAndPunctuation(toHiragana(line)));
+  return isRomaji(line) && mostWordsAreJapanese(line);
+}
+
+/**
+ * Make an effort to preserve other languages, but will err j-wards for words that happen to be valid in romaji (on, to, etc.)
+ */
+function toHiraganaLine(line: string) {
+  if (!line) { return line; }
+  return line.split(' ')
+    .map(w => [w, toHiragana(w)]).map(([w, jw]) => isJapaneseLine(jw) && !w.includes('l') ? jw : w).join(' ');
+}
+
+function isJapaneseLine(line: string) {
+  return isJapanese(removeSpacesAndPunctuation(line));
 }
 
 function isKanjiLine(line: string) {
@@ -76,15 +100,18 @@ function getChunkLineInfos(chunkLines: string[]): LineInfo[] {
   let currentLineInfo = new LineInfo();
   const lineInfos: LineInfo[] = [currentLineInfo];
   classifiedLines.forEach(({ line, type }) => {
-    if (currentLineInfo.isDefined(type)) {
-      lineInfos.push((currentLineInfo = new LineInfo()));
-    }
-
     if (type === LineType.Unclassified) {
       currentLineInfo[LineType.Unclassified].push(line);
-    } else {
-      currentLineInfo[type] = line;
+      return;
+    } 
+
+    // Only one of line type allowed per line info. Music chords must always be first
+    if (currentLineInfo.isDefined(type) 
+      || (type === LineType.Music && currentLineInfo.areDefined().length > 0)) {
+      lineInfos.push((currentLineInfo = new LineInfo()));
     }
+    
+    currentLineInfo[type] = line;
   });
 
   return lineInfos;
@@ -133,7 +160,7 @@ function createLineInfoFromChunkLines(chunks: string[]): LineInfo[] {
 
 function furiganaOutputFromLineInfo(lineInfos: LineInfo[]) {
   const outputChunks = lineInfos.map(lineInfo =>
-    [lineInfo[LineType.Music], lineInfo[LineType.Kanji], toHiragana(lineInfo[LineType.Romaji]), lineInfo[LineType.Unclassified].join('\n')]
+    [lineInfo[LineType.Music], lineInfo[LineType.Kanji], toHiraganaLine(lineInfo[LineType.Romaji]), lineInfo[LineType.Unclassified].join('\n')]
       .filter(x => x !== undefined && x.length > 0)
       .join('\n')
   );
