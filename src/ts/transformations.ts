@@ -1,4 +1,4 @@
-import { isKanji, isKana, isRomaji, isJapanese, toHiragana } from 'wanakana';
+import { isKanji, isKana, isJapanese, toHiragana } from 'wanakana';
 
 enum LineType {
   Unclassified = 0,
@@ -12,15 +12,19 @@ const classifiedLineTypesByImportance = [LineType.Kanji, LineType.Kana, LineType
 const allLineTypes = classifiedLineTypesByImportance.concat([LineType.Unclassified]);
 // Index into this with LineType - todo: think of way to tie things together with strong types
 class LineInfo {
-  constructor() {
+public isBlankLine: boolean;
+
+  constructor(isBlankLine?: boolean) {
     this[LineType.Unclassified] = [];
+    this.isBlankLine = isBlankLine || false;
   }
 
   public isDefined(t: LineType) {
     return this[t] !== undefined && this[t].length > 0;
   }
-  public areDefined() {
-    return allLineTypes.filter(t => this.isDefined(t));
+
+  public areDefined(excludeUnclassified: boolean = false) {
+    return allLineTypes.filter(t => this.isDefined(t) && (!excludeUnclassified || t !== LineType.Unclassified));
   }
 
   public notDefined() {
@@ -37,6 +41,7 @@ const classifiers = new Map<LineType, (line: string) => boolean>([
 ]);
 
 function isLineType(line: string, lineType: LineType) {
+  
   const classifier = classifiers.get(lineType);
   return classifier !== undefined && classifier(line);
 }
@@ -58,7 +63,7 @@ function isMusicChordLine(line: string) {
   );
 }
 
-function isMostlyRomaji(line: string) {
+function isRomajiOrMixedLine(line: string) {
   const words = toHiraganaLine(perWordTrimPunctuation(line)).split(' ').filter(word => perWordTrimPunctuation(word).trim() !== '');
   const convertedWords = words.map(w => isJapaneseLine(w));
 
@@ -67,7 +72,7 @@ function isMostlyRomaji(line: string) {
   convertedWords.forEach((w, i) => {
     if (w === currentRun.state) {
       currentRun.count++;
-    } else if (currentRun.count < 3 && currentRun.state === true) {
+    } else if (currentRun.count < 3 && currentRun.state === true) { // Probably a false positive
       const resurrectedRun = wordRuns.pop() || {state: w, count: 0};
       resurrectedRun.count += currentRun.count + 1;
       currentRun = resurrectedRun;
@@ -82,11 +87,6 @@ function isMostlyRomaji(line: string) {
   const jWords = wordRuns.filter(r => r.state === true).reduce((prev, curr) => prev + curr.count, 0);
   const nonJWords = wordRuns.filter(r => r.state === false).reduce((prev, curr) => prev + curr.count, 0);
   return wordRuns.length <= 2 && jWords > nonJWords;
-}
-
-function isRomajiOrMixedLine(line: string) {
-  // isRomaji checks individual characters quickly, so the second check ensures that when converted, the line makes valid Japanese
-  return isRomaji(line) && isMostlyRomaji(line);
 }
 
 /**
@@ -116,13 +116,18 @@ function getChunkLineInfos(chunkLines: string[]): LineInfo[] {
   const lineInfos: LineInfo[] = [currentLineInfo];
   classifiedLines.forEach(({ line, type }) => {
     if (type === LineType.Unclassified) {
+      const isBlankLine = line.trim() === '';
+      if (isBlankLine && currentLineInfo.areDefined().length > 0) { 
+        lineInfos.push((currentLineInfo = new LineInfo(isBlankLine)));
+      }
       currentLineInfo[LineType.Unclassified].push(line);
+      lineInfos.push((currentLineInfo = new LineInfo()));
       return;
     } 
 
     // Only one of line type allowed per line info. Music chords must always be first
     if (currentLineInfo.isDefined(type) 
-      || (type === LineType.Music && currentLineInfo.areDefined().length > 0)) {
+      || (type === LineType.Music && currentLineInfo.areDefined(true).length > 0)) {
       lineInfos.push((currentLineInfo = new LineInfo()));
     }
     
@@ -132,8 +137,9 @@ function getChunkLineInfos(chunkLines: string[]): LineInfo[] {
   return lineInfos;
 }
 
-function averageLineMatches<T>(array: T[], predicate: ((t: T) => boolean)) {
-  return array.filter(predicate).length > array.length / 2;
+function averageLineMatches(lines: LineInfo[], predicate: ((l: LineInfo) => boolean)) {
+  lines = lines.filter(l => !l.isBlankLine);
+  return lines.filter(predicate).length > lines.length / 2;
 }
 
 function merge(first: LineInfo[], second: LineInfo[]) {
@@ -144,6 +150,8 @@ function merge(first: LineInfo[], second: LineInfo[]) {
       .map(function(firstLine: LineInfo, index: number) {
         const secondLine = second[index];
         if (secondLine === undefined) {
+          return firstLine;
+        } else if (firstLine.isBlankLine && secondLine.isBlankLine) {
           return firstLine;
         }
 
