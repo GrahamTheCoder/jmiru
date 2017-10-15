@@ -10,13 +10,11 @@ enum LineType {
 
 const classifiedLineTypesByImportance = [LineType.Kanji, LineType.Kana, LineType.Music, LineType.Romaji];
 const allLineTypes = classifiedLineTypesByImportance.concat([LineType.Unclassified]);
+
 // Index into this with LineType - todo: think of way to tie things together with strong types
 class LineInfo {
-public isBlankLine: boolean;
-
-  constructor(isBlankLine?: boolean) {
+  constructor() {
     this[LineType.Unclassified] = [];
-    this.isBlankLine = isBlankLine || false;
   }
 
   public isDefined(t: LineType) {
@@ -30,6 +28,10 @@ public isBlankLine: boolean;
   public notDefined() {
     return allLineTypes.filter(t => !this.isDefined(t));
   }
+
+  public isBlank() {
+    return this.areDefined().length === 0 && this[LineType.Unclassified].every((l: string) => isBlankLine(l));
+  }
 }
 
 const classifiers = new Map<LineType, (line: string) => boolean>([
@@ -41,7 +43,6 @@ const classifiers = new Map<LineType, (line: string) => boolean>([
 ]);
 
 function isLineType(line: string, lineType: LineType) {
-  
   const classifier = classifiers.get(lineType);
   return classifier !== undefined && classifier(line);
 }
@@ -98,6 +99,10 @@ function toHiraganaLine(line: string) {
     .map(w => [w, toHiragana(w)]).map(([w, jw]) => isJapaneseLine(jw) && !w.includes('l') && !w.includes('ti') ? jw : w).join(' ');
 }
 
+function isBlankLine(line: string) {
+  return line.trim() === '';
+}
+
 function isJapaneseLine(line: string) {
   return isJapanese(perWordTrimPunctuation(line));
 }
@@ -107,6 +112,7 @@ function isKanjiLine(line: string) {
 }
 
 function classifyLine(line: string) {
+  if (isBlankLine(line)) { return { line: line, type: LineType.Unclassified }; }
   return { line: line, type: classifiedLineTypesByImportance.find(lt => isLineType(line, lt)) || LineType.Unclassified };
 }
 
@@ -116,9 +122,9 @@ function getChunkLineInfos(chunkLines: string[]): LineInfo[] {
   const lineInfos: LineInfo[] = [currentLineInfo];
   classifiedLines.forEach(({ line, type }) => {
     if (type === LineType.Unclassified) {
-      const isBlankLine = line.trim() === '';
-      if (isBlankLine && currentLineInfo.areDefined().length > 0) { 
-        lineInfos.push((currentLineInfo = new LineInfo(isBlankLine)));
+      const isBlank = isBlankLine(line);
+      if (isBlank && currentLineInfo.areDefined().length > 0) { 
+        lineInfos.push((currentLineInfo = new LineInfo()));
       }
       currentLineInfo[LineType.Unclassified].push(line);
       lineInfos.push((currentLineInfo = new LineInfo()));
@@ -138,7 +144,7 @@ function getChunkLineInfos(chunkLines: string[]): LineInfo[] {
 }
 
 function averageLineMatches(lines: LineInfo[], predicate: ((l: LineInfo) => boolean)) {
-  lines = lines.filter(l => !l.isBlankLine);
+  lines = lines.filter(l => !l.isBlank());
   return lines.filter(predicate).length > lines.length / 2;
 }
 
@@ -146,15 +152,28 @@ function merge(first: LineInfo[], second: LineInfo[]) {
   const notDefinedInFirstOnAverage = allLineTypes.filter(type => averageLineMatches(first, l => l.notDefined().includes(type)));
   const definedInSecondOnAverage = allLineTypes.filter(type => averageLineMatches(second, l => l.areDefined().includes(type)));
   if (notDefinedInFirstOnAverage.some(missingFromFirst => definedInSecondOnAverage.includes(missingFromFirst))) {
-    return first
-      .map(function(firstLine: LineInfo, index: number) {
-        const secondLine = second[index];
-        if (secondLine === undefined) {
-          return firstLine;
-        } else if (firstLine.isBlankLine && secondLine.isBlankLine) {
-          return firstLine;
-        }
-
+    const combined = [];
+    let firstIndex = 0, secondIndex = 0;
+    while (firstIndex < first.length || secondIndex < second.length) {
+      const firstLine = first[firstIndex];  
+      const secondLine = second[secondIndex];
+      if (secondLine === undefined) {
+        firstIndex++;
+        combined.push(firstLine);
+      } else if (firstLine === undefined) {
+        secondIndex++;
+        combined.push(secondLine);
+      } else if (firstLine.isBlank() && secondLine.isBlank()) {
+        firstIndex++;
+        secondIndex++;
+        combined.push(firstLine);
+      } else if (secondLine.isBlank()) {
+        firstIndex++;  
+        combined.push(firstLine);
+      } else if (firstLine.isBlank()) {
+          secondIndex++;
+          combined.push(secondLine);
+      } else {
         const li = new LineInfo();
         li[LineType.Unclassified] = firstLine[LineType.Unclassified].concat(secondLine[LineType.Unclassified]);
         classifiedLineTypesByImportance.forEach(lineType => {
@@ -163,9 +182,12 @@ function merge(first: LineInfo[], second: LineInfo[]) {
             .map(x => x[lineType])
             .join('\n');
         });
-        return li;
-      })
-      .concat(second.slice(first.length));
+        firstIndex++;
+        secondIndex++;
+        combined.push(li);
+      }
+    }
+    return combined;
   } else {
     return first.concat(second);
   }
