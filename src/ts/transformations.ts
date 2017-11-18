@@ -96,7 +96,7 @@ function isRomajiOrMixedLine(line: string) {
 function toHiraganaLine(line: string) {
   if (!line) { return line; }
   return line.split(' ')
-    .map(w => [w, toHiragana(w)]).map(([w, jw]) => isJapaneseLine(jw) && !w.includes('l') && !w.includes('ti') ? jw : w).join(' ');
+    .map(w => [w, toHiragana(w.replace('dzu', 'du'))]).map(([w, jw]) => isJapaneseLine(jw) && !w.includes('l') && !w.includes('ti') ? jw : w).join(' ');
 }
 
 function isBlankLine(line: string) {
