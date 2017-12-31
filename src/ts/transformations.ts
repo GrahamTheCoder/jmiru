@@ -1,4 +1,5 @@
 import { isKanji, isKana, isJapanese, toHiragana } from 'wanakana';
+import { SolveForLine } from './csp';
 
 enum LineType {
   Unclassified = 0,
@@ -203,9 +204,25 @@ function createLineInfoFromChunkLines(chunks: string[]): LineInfo[] {
   return mergeChunks(chunkLineInfos);
 }
 
+function furiganaLine(kanji: string, hiragana: string) {
+  if (!kanji) { return hiragana; }
+  if (!hiragana) { return kanji; }
+
+  const kanjiWithoutSpaces = kanji.split('').filter(x => x !== ' ').join('');
+  const hiraganaWithoutSpaces = hiragana.split('').filter(x => x !== ' ').join('');
+  return SolveForLine(kanjiWithoutSpaces, hiraganaWithoutSpaces).map(v => {
+    let suffix = v.trailingUnmatched;
+    if (v.shouldDisplay) {
+      suffix = '[' + v.kana /*+ ',' + v.debug*/ + ']' + suffix;
+    }
+    return v.japanese + suffix;
+  }).join('');
+
+}
+
 function furiganaOutputFromLineInfo(lineInfos: LineInfo[]) {
   const outputChunks = lineInfos.map(lineInfo =>
-    [lineInfo[LineType.Music], lineInfo[LineType.Kanji], toHiraganaLine(lineInfo[LineType.Romaji]), lineInfo[LineType.Unclassified].join('\n')]
+    [lineInfo[LineType.Music], furiganaLine(lineInfo[LineType.Kanji], toHiraganaLine(lineInfo[LineType.Romaji])), lineInfo[LineType.Unclassified].join('\n')]
       .filter(x => x !== undefined && x.length > 0)
       .join('\n')
   );
