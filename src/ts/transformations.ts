@@ -208,11 +208,11 @@ function furiganaLine(kanji: string, hiragana: string) {
   if (!kanji) { return hiragana; }
   if (!hiragana) { return kanji; }
 
-  const kanjiWithoutSpaces = kanji.split('').filter(x => x !== ' ').join('');
-  const hiraganaWithoutSpaces = hiragana.split('').filter(x => x !== ' ').join('');
+  const kanjiWithoutSpaces = kanji.split('').filter(x => x !== ' ' && x !== '　').join('');
+  const hiraganaWithoutSpaces = hiragana.split('').filter(x => x !== ' ' && x !== '　').join('');
   return SolveForLine(kanjiWithoutSpaces, hiraganaWithoutSpaces).map(v => {
     let suffix = v.trailingUnmatched;
-    if (v.shouldDisplay) {
+    if (v.shouldDisplay || v.shouldDisplayDebug) {
       suffix = '[' + v.kana /*+ ',' + v.debug*/ + ']' + suffix;
     }
     return v.japanese + suffix;
