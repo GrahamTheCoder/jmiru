@@ -211,11 +211,10 @@ function furiganaLine(kanji: string, hiragana: string) {
   const kanjiWithoutSpaces = kanji.split('').filter(x => x !== ' ' && x !== '　').join('');
   const hiraganaWithoutSpaces = hiragana.split('').filter(x => x !== ' ' && x !== '　').join('');
   return SolveForLine(kanjiWithoutSpaces, hiraganaWithoutSpaces).map(v => {
-    let suffix = v.trailingUnmatched;
     if (v.shouldDisplay || v.shouldDisplayDebug) {
-      suffix = '[' + v.kana /*+ ',' + v.debug*/ + ']' + suffix;
+      return '<ruby><rb>' + v.japanese + '</rb><rt>' + v.kana + '</rt></ruby>' + v.trailingUnmatched;
     }
-    return v.japanese + suffix;
+    return v.japanese + v.trailingUnmatched;
   }).join('');
 
 }
