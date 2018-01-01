@@ -4,6 +4,21 @@ const kiwi = require('./kiwi');
 const maxUnmatched = 2;
 const averageKanaPerKanji = 2;
 const maxKanaPerKanji = 4;
+const smallChars = ['ぁ', 'ぃ', 'ぇ', 'ぅ', 'ぉ', 'ゃ', 'ゅ', 'ょ', 'っ', 'ゕ', 'ゖ', 'ゎ'];
+
+function getAllIndexes<T>(arr: T[], predicate: ((_: T) => boolean)) {
+    var indexes = [];
+    for (let i = 0; i < arr.length; i++) {
+        if (predicate(arr[i])) {
+            indexes.push(i);
+        }
+    }
+    return indexes;
+}
+
+function attachToPrecedingCharacter(char: string) {
+    return smallChars.includes(char);
+}
 
 export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
     var solver: kiwi.Solver = new kiwi.Solver();
@@ -14,11 +29,13 @@ export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
     const kana = kanaStr.split('');
     const startVars = japanese.map((c, i) => new kiwi.Variable('start-' + i)); // Starting character inclusive
     const endVars = japanese.map((c, i) => new kiwi.Variable('end-' + i)); // Ending character exclusive
+    const kIndexesToAvoidEndingOn = getAllIndexes(kana, attachToPrecedingCharacter);
     
     const lastEndVar = endVars[endVars.length - 1];
     solver.createConstraint(lastEndVar, kiwi.Operator.Le, kana.length, kiwi.Strength.required);
     solver.createConstraint(lastEndVar, kiwi.Operator.Ge, kana.length - maxUnmatched, kiwi.Strength.strong);
     solver.createConstraint(lastEndVar, kiwi.Operator.Eq, kana.length, kiwi.Strength.medium);
+
     let prevEnd: kiwi.Variable | null = null;
     startVars.map((s, i) => {
         const e: kiwi.Variable = endVars[i];
@@ -54,6 +71,10 @@ export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
         } else if (jIsKanji) {
             solver.createConstraint(e, kiwi.Operator.Eq, s.plus(averageKanaPerKanji), kiwi.Strength.weak);
             solver.createConstraint(e, kiwi.Operator.Le, s.plus(maxKanaPerKanji), kiwi.Strength.required);
+            kIndexesToAvoidEndingOn.map(kIndex => {
+                solver.createConstraint(e, kiwi.Operator.Le, kIndex - 1, kiwi.Strength.weak);
+                solver.createConstraint(e, kiwi.Operator.Ge, kIndex + 1, kiwi.Strength.weak);
+            });            
         }
         prevEnd = e;
     });
