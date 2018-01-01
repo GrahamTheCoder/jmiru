@@ -1,7 +1,7 @@
 import { isKanji, toHiragana, isKana } from 'wanakana';
 const kiwi = require('./kiwi');
 
-const maxUnmatched = 1;
+const maxUnmatched = 2;
 const averageKanaPerKanji = 2;
 const maxKanaPerKanji = 4;
 
@@ -32,8 +32,8 @@ export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
 
         solver.createConstraint(s, kiwi.Operator.Ge, prevEnd || 0, kiwi.Strength.required);
         solver.createConstraint(e, kiwi.Operator.Ge, s.plus(minLength), kiwi.Strength.required);
-        solver.createConstraint(s, kiwi.Operator.Le, prevEnd && prevEnd.plus(maxUnmatched) || maxUnmatched, kiwi.Strength.strong);
-        solver.createConstraint(s, kiwi.Operator.Eq, prevEnd || 0, kiwi.Strength.medium);
+        solver.createConstraint(s, kiwi.Operator.Le, prevEnd && prevEnd.plus(maxUnmatched) || maxUnmatched, kiwi.Strength.required);
+        solver.createConstraint(s, kiwi.Operator.Eq, prevEnd || 0, kiwi.Strength.strong);
         
         if (jIsKana) {
             const asHiragana = toHiragana(jChr);

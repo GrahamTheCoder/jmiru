@@ -39,4 +39,8 @@ describe('Works with no spaces in input', () => {
   test('With kanji matching 1 or 3 kana', () => {
     expectSolveForLineToBe('心[こころ]が体[からだ]を追[お]い越[こ]してきたんだよ');
   });
+
+  test('With several of the same kana (na)', () => {
+    expectSolveForLineToBe('揺[ゆ]るがない世[せ]界[かい]非[ひ]情[じょう]な現[げん]状[じょう]続[つづ]く壁[かべ]は何[なん]重[じゅ]層[うそ]?');
+  });
 });
