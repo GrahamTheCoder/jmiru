@@ -12,8 +12,8 @@ export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
     // const jEnd =  japanese.length - 1;
     const japanese = japaneseStr.split('');
     const kana = kanaStr.split('');
-    const  startVars = japanese.map((c, i) => new kiwi.Variable('start-' + i)); // Starting character inclusive
-    const  endVars = japanese.map((c, i) => new kiwi.Variable('end-' + i)); // Ending character exclusive
+    const startVars = japanese.map((c, i) => new kiwi.Variable('start-' + i)); // Starting character inclusive
+    const endVars = japanese.map((c, i) => new kiwi.Variable('end-' + i)); // Ending character exclusive
     
     const lastEndVar = endVars[endVars.length - 1];
     solver.createConstraint(lastEndVar, kiwi.Operator.Le, kana.length, kiwi.Strength.required);
