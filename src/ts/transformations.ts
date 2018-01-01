@@ -1,5 +1,5 @@
 import { isKanji, isKana, isJapanese, toHiragana } from 'wanakana';
-import { SolveForLine } from './csp';
+import { MatchFuriganaForLine } from './csp';
 
 enum LineType {
   Unclassified = 0,
@@ -210,7 +210,7 @@ function furiganaLine(kanji: string, hiragana: string) {
 
   const kanjiWithoutSpaces = kanji.split('').filter(x => x !== ' ' && x !== '　').join('');
   const hiraganaWithoutSpaces = hiragana.split('').filter(x => x !== ' ' && x !== '　').join('');
-  return SolveForLine(kanjiWithoutSpaces, hiraganaWithoutSpaces).map(v => {
+  return MatchFuriganaForLine(kanjiWithoutSpaces, hiraganaWithoutSpaces).map(v => {
     if (v.shouldDisplay || v.shouldDisplayDebug) {
       return '<ruby><rb>' + v.japanese + '</rb><rt>' + v.kana + '</rt></ruby>' + v.trailingUnmatched;
     }

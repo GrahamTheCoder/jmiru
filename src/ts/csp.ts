@@ -5,7 +5,7 @@ const maxUnmatched = 1;
 const averageKanaPerKanji = 2;
 const maxKanaPerKanji = 4;
 
-export const SolveForLine = (japaneseStr: string, kanaStr: string) => {
+export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
     var solver: kiwi.Solver = new kiwi.Solver();
     // const jStart = new kiwi.Variable('jStart');
     // const hStart = new kiwi.Variable('hStart');
