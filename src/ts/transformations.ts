@@ -1,5 +1,4 @@
 import { isKanji, isKana, isJapanese, toHiragana } from 'wanakana';
-import { MatchFuriganaForLine } from './csp';
 
 enum LineType {
   Unclassified = 0,
@@ -201,31 +200,12 @@ function mergeChunks(chunkLineInfos: LineInfo[][]) {
 
 function createLineInfoFromChunkLines(chunks: string[]): LineInfo[] {
   const chunkLineInfos = chunks.map(chunk => getChunkLineInfos(chunk.split('\n')));
-  return mergeChunks(chunkLineInfos);
-}
-
-function furiganaLine(kanji: string, hiragana: string) {
-  if (!kanji) { return hiragana; }
-  if (!hiragana) { return kanji; }
-
-  const kanjiWithoutSpaces = kanji.split('').filter(x => x !== ' ' && x !== '　').join('');
-  const hiraganaWithoutSpaces = hiragana.split('').filter(x => x !== ' ' && x !== '　').join('');
-  return MatchFuriganaForLine(kanjiWithoutSpaces, hiraganaWithoutSpaces).map(v => {
-    if (v.shouldDisplay || v.shouldDisplayDebug) {
-      return '<ruby><rb>' + v.japanese + '</rb><rt>' + v.kana + '</rt></ruby>' + v.trailingUnmatched;
+  return mergeChunks(chunkLineInfos).map(li => {
+    if (li.isDefined(LineType.Romaji) && !li.isDefined(LineType.Kana)) {
+      li[LineType.Kana] = toHiraganaLine(li[LineType.Romaji]);
     }
-    return v.japanese + v.trailingUnmatched;
-  }).join('');
-
+    return li;
+  });
 }
 
-function furiganaOutputFromLineInfo(lineInfos: LineInfo[]) {
-  const outputChunks = lineInfos.map(lineInfo =>
-    [lineInfo[LineType.Music], furiganaLine(lineInfo[LineType.Kanji], toHiraganaLine(lineInfo[LineType.Romaji])), lineInfo[LineType.Unclassified].join('\n')]
-      .filter(x => x !== undefined && x.length > 0)
-      .join('\n')
-  );
-  return outputChunks;
-}
-
-export { createLineInfoFromChunkLines, furiganaOutputFromLineInfo };
+export { LineType, LineInfo, createLineInfoFromChunkLines };
