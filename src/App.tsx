@@ -59,3 +59,5 @@ class App extends React.Component<{}, AppState> {
 }
 
 export default App;
+
+export default App;
