@@ -22,13 +22,10 @@ function attachToPrecedingCharacter(char: string) {
 
 export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
     var solver: kiwi.Solver = new kiwi.Solver();
-    // const jStart = new kiwi.Variable('jStart');
-    // const hStart = new kiwi.Variable('hStart');
-    // const jEnd =  japanese.length - 1;
     const japanese = japaneseStr.split('');
     const kana = kanaStr.split('');
-    const startVars = japanese.map((c, i) => new kiwi.Variable('start-' + i)); // Starting character inclusive
-    const endVars = japanese.map((c, i) => new kiwi.Variable('end-' + i)); // Ending character exclusive
+    const startVars: kiwi.Variable[] = japanese.map((c, i) => new kiwi.Variable('start-' + i)); // Starting character inclusive
+    const endVars: kiwi.Variable[] = japanese.map((c, i) => new kiwi.Variable('end-' + i)); // Ending character exclusive
     const kIndexesToAvoidEndingOn = getAllIndexes(kana, attachToPrecedingCharacter);
     
     const lastEndVar = endVars[endVars.length - 1];
