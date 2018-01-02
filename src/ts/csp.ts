@@ -37,7 +37,7 @@ export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
     solver.createConstraint(lastEndVar, kiwi.Operator.Eq, kana.length, kiwi.Strength.medium);
 
     let prevEnd: kiwi.Variable | null = null;
-    startVars.map((s, i) => {
+    startVars.forEach((s, i) => {
         const e: kiwi.Variable = endVars[i];
         const jChr = japanese[i];
         const jIsKanji = isKanji(jChr);
@@ -57,7 +57,7 @@ export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
             solver.createConstraint(e, kiwi.Operator.Eq, s.plus(1), kiwi.Strength.required);
             let firstIndex: number | null = null;
             let lastIndex: number | null = null;
-            kana.map((k, ki) => {
+            kana.forEach((k, ki) => {
                 if (toHiragana(k) === asHiragana) {
                     firstIndex = firstIndex || ki;
                     lastIndex = ki;
@@ -71,7 +71,7 @@ export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
         } else if (jIsKanji) {
             solver.createConstraint(e, kiwi.Operator.Eq, s.plus(averageKanaPerKanji), kiwi.Strength.weak);
             solver.createConstraint(e, kiwi.Operator.Le, s.plus(maxKanaPerKanji), kiwi.Strength.required);
-            kIndexesToAvoidEndingOn.map(kIndex => {
+            kIndexesToAvoidEndingOn.forEach(kIndex => {
                 solver.createConstraint(e, kiwi.Operator.Le, kIndex - 1, kiwi.Strength.weak);
                 solver.createConstraint(e, kiwi.Operator.Ge, kIndex + 1, kiwi.Strength.weak);
             });            
