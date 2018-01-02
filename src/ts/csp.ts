@@ -49,7 +49,18 @@ export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
         solver.createConstraint(s, kiwi.Operator.Le, prevEnd && prevEnd.plus(maxUnmatched) || maxUnmatched, kiwi.Strength.required);
         solver.createConstraint(s, kiwi.Operator.Eq, prevEnd || 0, kiwi.Strength.strong);
         
-        if (jIsKana) {
+        if (jIsKanji) {
+            solver.createConstraint(e, kiwi.Operator.Eq, s.plus(averageKanaPerKanji), kiwi.Strength.weak);
+            solver.createConstraint(e, kiwi.Operator.Le, s.plus(maxKanaPerKanji), kiwi.Strength.required);
+            kIndexesToAvoidEndingOn.forEach(kIndex => {
+                // create(0, 0, 1, 0.9) TODO: Fix this - it isn't playing well with the average kana or unmatched rule
+                const avoidSmallKanaStrength = kiwi.Strength.weak;
+                solver.createConstraint(s, kiwi.Operator.Le, kIndex - 1, avoidSmallKanaStrength);
+                solver.createConstraint(s, kiwi.Operator.Ge, kIndex + 1, avoidSmallKanaStrength);
+                solver.createConstraint(e, kiwi.Operator.Le, kIndex - 1, avoidSmallKanaStrength);
+                solver.createConstraint(e, kiwi.Operator.Ge, kIndex + 1, avoidSmallKanaStrength);
+            });            
+        } else {
             const asHiragana = toHiragana(jChr);
             solver.createConstraint(e, kiwi.Operator.Eq, s.plus(1), kiwi.Strength.required);
             let firstIndex: number | null = null;
@@ -65,13 +76,6 @@ export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
                 solver.createConstraint(s, kiwi.Operator.Ge, firstIndex, kiwi.Strength.strong);
                 solver.createConstraint(s, kiwi.Operator.Le, lastIndex, kiwi.Strength.strong);
             }
-        } else if (jIsKanji) {
-            solver.createConstraint(e, kiwi.Operator.Eq, s.plus(averageKanaPerKanji), kiwi.Strength.weak);
-            solver.createConstraint(e, kiwi.Operator.Le, s.plus(maxKanaPerKanji), kiwi.Strength.required);
-            kIndexesToAvoidEndingOn.forEach(kIndex => {
-                solver.createConstraint(e, kiwi.Operator.Le, kIndex - 1, kiwi.Strength.weak);
-                solver.createConstraint(e, kiwi.Operator.Ge, kIndex + 1, kiwi.Strength.weak);
-            });            
         }
         prevEnd = e;
     });
