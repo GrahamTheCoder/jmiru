@@ -3,6 +3,8 @@
 Use case: As a learner of Japanese, I want to see Japanese text (e.g. song lyrics/chords) as Kanji with furigana, and avoid romaji at all costs.
 This project aims to help people pull together Japanese to visualize in a convenient way for them.
 
+![image](https://user-images.githubusercontent.com/2490482/34612730-da0d8daa-f222-11e7-9cb2-f63eadc7006c.png)
+
 ## How to use it
 Sorry this is still very early stage development, star the repository to show your support, or create an issue for some work you'd be interested in doing if you're a developer. Also, feel free to create an issue for input you wish worked with the input and expected output so that I can use it as a test case.
 
