@@ -24,52 +24,75 @@ export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
     var solver: kiwi.Solver = new kiwi.Solver();
     const japanese = japaneseStr.split('');
     const kana = kanaStr.split('');
-    const jVars = japanese.map((c, i) => ({
-        jIndex: i,
-        jChr: c,
-        jIsKanji: isKanji(c),
-        jIsKana: isKana(c),
-        hStart: <kiwi.Variable> new kiwi.Variable('start-' + i), // Starting character inclusive
-        hEnd: <kiwi.Variable> new kiwi.Variable('end-' + i) // Ending character exclusive
-    }));
+    const jVars = japanese.map((c, i) => new JCharacter(c, i));
 
     const kIndexesToAvoidEndingOn = getAllIndexes(kana, attachToPrecedingCharacter);
-    const lastEndVar = jVars[jVars.length - 1].hEnd;
-    solver.createConstraint(lastEndVar, kiwi.Operator.Le, kana.length, kiwi.Strength.required);
-    solver.createConstraint(lastEndVar, kiwi.Operator.Ge, kana.length - maxUnmatched, kiwi.Strength.strong);
-    solver.createConstraint(lastEndVar, kiwi.Operator.Eq, kana.length, kiwi.Strength.medium);
-
+    jVars[jVars.length - 1].addEndConstraints(solver, kana.length);
     let prevEnd: kiwi.Variable | null = null;
     jVars.forEach((j, i) => {
-        const s: kiwi.Variable = j.hStart;
-        const e: kiwi.Variable = j.hEnd;
-        const jChr = j.jChr;
-        const jIsKanji = j.jIsKanji;
-        const jIsKana = j.jIsKana;
-        let minLength = 0;
-        if (jIsKanji || jIsKana) {
-            minLength = 1;
-        }
+        j.addSequenceConstraints(solver, prevEnd);
+        j.addLengthConstraints(solver);
+        j.addCharacterSpecificConstraints(solver, kIndexesToAvoidEndingOn, kana);
+        prevEnd = j.hEnd;
+    });
+    
+    solver.updateVariables();
+    return jVars.map((j, i) => j.build(kanaStr, jVars[i + 1]));
+};
 
-        solver.createConstraint(s, kiwi.Operator.Ge, prevEnd || 0, kiwi.Strength.required);
-        solver.createConstraint(e, kiwi.Operator.Ge, s.plus(minLength), kiwi.Strength.required);
-        solver.createConstraint(s, kiwi.Operator.Le, prevEnd && prevEnd.plus(maxUnmatched) || 0, kiwi.Strength.required);
-        solver.createConstraint(s, kiwi.Operator.Eq, prevEnd || 0, kiwi.Strength.strong);
-        
-        if (jIsKanji) {
-            solver.createConstraint(e, kiwi.Operator.Eq, s.plus(averageKanaPerKanji), kiwi.Strength.weak);
-            solver.createConstraint(e, kiwi.Operator.Le, s.plus(maxKanaPerKanji), kiwi.Strength.required);
+class JCharacter {
+    hEnd: kiwi.Variable;
+    hStart: kiwi.Variable;
+    jIsKana: boolean;
+    jIsKanji: boolean;
+    jChr: string;
+    jIndex: number;
+
+    constructor(c: string, i: number) {
+        this.jIndex = i;
+        this.jChr = c;
+        this.jIsKanji = isKanji(c);
+        this.jIsKana = isKana(c);
+        this.hStart = new kiwi.Variable('start-' + i); // Starting character inclusive
+        this.hEnd = new kiwi.Variable('end-' + i); // Ending character exclusive
+    }
+
+    addSequenceConstraints(solver: kiwi.Solver, prevEnd: kiwi.Variable | null) {
+
+        solver.createConstraint(this.hStart, kiwi.Operator.Ge, prevEnd || 0, kiwi.Strength.required);
+        solver.createConstraint(this.hStart, kiwi.Operator.Le, prevEnd && prevEnd.plus(maxUnmatched) || 0, kiwi.Strength.required);
+        solver.createConstraint(this.hStart, kiwi.Operator.Eq, prevEnd || 0, kiwi.Strength.strong);
+    }
+
+    addEndConstraints(solver: kiwi.Solver, lastValidEndIndex: number) {
+        solver.createConstraint(this.hEnd, kiwi.Operator.Le, lastValidEndIndex, kiwi.Strength.required);
+        solver.createConstraint(this.hEnd, kiwi.Operator.Ge, lastValidEndIndex - maxUnmatched, kiwi.Strength.strong);
+        solver.createConstraint(this.hEnd, kiwi.Operator.Eq, lastValidEndIndex, kiwi.Strength.medium);
+    }
+
+    addLengthConstraints(solver: kiwi.Solver) {
+        if (this.jIsKanji) {
+            solver.createConstraint(this.hEnd, kiwi.Operator.Ge, this.hStart.plus(1), kiwi.Strength.required);
+            solver.createConstraint(this.hEnd, kiwi.Operator.Le, this.hStart.plus(maxKanaPerKanji), kiwi.Strength.required);
+            solver.createConstraint(this.hEnd, kiwi.Operator.Eq, this.hStart.plus(averageKanaPerKanji), kiwi.Strength.weak);
+        } else {
+            solver.createConstraint(this.hEnd, kiwi.Operator.Eq, this.hStart.plus(1), kiwi.Strength.required);
+        }
+    }
+
+    addCharacterSpecificConstraints(solver: kiwi.Solver, kIndexesToAvoidEndingOn: number[], kana: string[]) {
+        const s: kiwi.Variable = this.hStart;
+        const e: kiwi.Variable = this.hEnd;
+
+        if (this.jIsKanji) {
             kIndexesToAvoidEndingOn.forEach(kIndex => {
                 // create(0, 0, 1, 0.9) TODO: Fix this - it isn't playing well with the average kana or unmatched rule
                 const avoidSmallKanaStrength = kiwi.Strength.weak;
-                solver.createConstraint(s, kiwi.Operator.Le, kIndex - 1, avoidSmallKanaStrength);
-                solver.createConstraint(s, kiwi.Operator.Ge, kIndex + 1, avoidSmallKanaStrength);
-                solver.createConstraint(e, kiwi.Operator.Le, kIndex - 1, avoidSmallKanaStrength);
-                solver.createConstraint(e, kiwi.Operator.Ge, kIndex + 1, avoidSmallKanaStrength);
+                this.notEqual(solver, s, kIndex, avoidSmallKanaStrength);
+                this.notEqual(solver, e, kIndex, avoidSmallKanaStrength);
             });            
         } else {
-            const asHiragana = toHiragana(jChr);
-            solver.createConstraint(e, kiwi.Operator.Eq, s.plus(1), kiwi.Strength.required);
+            const asHiragana = toHiragana(this.jChr);
             let firstIndex: number | null = null;
             let lastIndex: number | null = null;
             kana.forEach((k, ki) => {
@@ -84,25 +107,27 @@ export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
                 solver.createConstraint(s, kiwi.Operator.Le, lastIndex, kiwi.Strength.required);
             }
         }
-        prevEnd = e;
-    });
-    
-    solver.updateVariables();
-    return jVars.map((j, i) => {
-        const s = j.hStart;
-        const e = j.hEnd;
+    }
+
+    build(kanaStr: string, nextOrDefault: JCharacter) {
+        const s = this.hStart;
+        const e = this.hEnd;
         const correspondingKana = kanaStr.substring(s.value(), e.value());
-        const nextJVar = jVars[j.jIndex + 1];
-        const nextStart = (nextJVar && nextJVar.hStart || e).value();
+        const nextStart = (nextOrDefault && nextOrDefault.hStart || e).value();
         const trailingUnmatched = kanaStr.substring(e.value(), nextStart);
-        const shouldDisplay = correspondingKana.length > 0 && j.jIsKanji;
+        const shouldDisplay = correspondingKana.length > 0 && this.jIsKanji;
         return {
-            japanese: j.jChr,
+            japanese: this.jChr,
             kana: correspondingKana,
             trailingUnmatched: trailingUnmatched,
             shouldDisplay: shouldDisplay,
-            shouldDisplayDebug: shouldDisplay || j.jIsKana && toHiragana(j.jChr) !== toHiragana(correspondingKana),
+            shouldDisplayDebug: shouldDisplay || this.jIsKana && toHiragana(this.jChr) !== toHiragana(correspondingKana),
             debug: s.value() + '-' + e.value()
         };
-    });
-};
+    }
+
+    private notEqual(solver: kiwi.Solver, v: kiwi.Variable, i: number, strength: number) {
+        solver.createConstraint(v, kiwi.Operator.Le, i - 1, strength);
+        solver.createConstraint(v, kiwi.Operator.Ge, i + 1, strength);
+    }
+}
