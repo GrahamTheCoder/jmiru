@@ -46,7 +46,7 @@ export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
 
         solver.createConstraint(s, kiwi.Operator.Ge, prevEnd || 0, kiwi.Strength.required);
         solver.createConstraint(e, kiwi.Operator.Ge, s.plus(minLength), kiwi.Strength.required);
-        solver.createConstraint(s, kiwi.Operator.Le, prevEnd && prevEnd.plus(maxUnmatched) || maxUnmatched, kiwi.Strength.required);
+        solver.createConstraint(s, kiwi.Operator.Le, prevEnd && prevEnd.plus(maxUnmatched) || 0, kiwi.Strength.required);
         solver.createConstraint(s, kiwi.Operator.Eq, prevEnd || 0, kiwi.Strength.strong);
         
         if (jIsKanji) {
@@ -73,8 +73,8 @@ export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
                 }
             });
             if (firstIndex != null && lastIndex != null) {
-                solver.createConstraint(s, kiwi.Operator.Ge, firstIndex, kiwi.Strength.strong);
-                solver.createConstraint(s, kiwi.Operator.Le, lastIndex, kiwi.Strength.strong);
+                solver.createConstraint(s, kiwi.Operator.Ge, firstIndex, kiwi.Strength.required);
+                solver.createConstraint(s, kiwi.Operator.Le, lastIndex, kiwi.Strength.required);
             }
         }
         prevEnd = e;
