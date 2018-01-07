@@ -21,7 +21,6 @@ export class JCharacter {
     }
 
     addSequenceConstraints(solver: kiwi.Solver, prevEnd: kiwi.Variable | null) {
-
         solver.createConstraint(this.hStart, kiwi.Operator.Ge, prevEnd || 0, kiwi.Strength.required);
         solver.createConstraint(this.hStart, kiwi.Operator.Le, prevEnd && prevEnd.plus(maxUnmatched) || 0, kiwi.Strength.required);
         solver.createConstraint(this.hStart, kiwi.Operator.Eq, prevEnd || 0, kiwi.Strength.strong);
@@ -29,8 +28,8 @@ export class JCharacter {
 
     addEndConstraints(solver: kiwi.Solver, lastValidEndIndex: number) {
         solver.createConstraint(this.hEnd, kiwi.Operator.Le, lastValidEndIndex, kiwi.Strength.required);
-        solver.createConstraint(this.hEnd, kiwi.Operator.Ge, lastValidEndIndex - maxUnmatched, kiwi.Strength.strong);
-        solver.createConstraint(this.hEnd, kiwi.Operator.Eq, lastValidEndIndex, kiwi.Strength.medium);
+        solver.createConstraint(this.hEnd, kiwi.Operator.Ge, lastValidEndIndex - maxUnmatched, kiwi.Strength.required);
+        solver.createConstraint(this.hEnd, kiwi.Operator.Eq, lastValidEndIndex, kiwi.Strength.strong);
     }
 
     addLengthConstraints(solver: kiwi.Solver) {
@@ -50,7 +49,7 @@ export class JCharacter {
         if (this.jIsKanji) {
             kIndexesToAvoidEndingOn.forEach(kIndex => {
                 // create(0, 0, 1, 0.9) TODO: Fix this - it isn't playing well with the average kana or unmatched rule
-                const avoidSmallKanaStrength = kiwi.Strength.weak;
+                const avoidSmallKanaStrength = kiwi.Strength.strong;
                 this.notEqual(solver, s, kIndex, avoidSmallKanaStrength);
                 this.notEqual(solver, e, kIndex, avoidSmallKanaStrength);
             });            

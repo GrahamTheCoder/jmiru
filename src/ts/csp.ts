@@ -20,9 +20,8 @@ function attachToPrecedingCharacter(char: string) {
 
 export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
     var solver: kiwi.Solver = new kiwi.Solver();
-    const japanese = japaneseStr.split('');
     const kana = kanaStr.split('');
-    const jVars = japanese.map((c, i) => new JCharacter(c, i));
+    const jVars = japaneseStr.split('').map((c, i) => new JCharacter(c, i));
 
     const kIndexesToAvoidEndingOn = getAllIndexes(kana, attachToPrecedingCharacter);
     jVars[jVars.length - 1].addEndConstraints(solver, kana.length);
