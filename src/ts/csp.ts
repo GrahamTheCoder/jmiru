@@ -24,21 +24,28 @@ export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
     var solver: kiwi.Solver = new kiwi.Solver();
     const japanese = japaneseStr.split('');
     const kana = kanaStr.split('');
-    const startVars: kiwi.Variable[] = japanese.map((c, i) => new kiwi.Variable('start-' + i)); // Starting character inclusive
-    const endVars: kiwi.Variable[] = japanese.map((c, i) => new kiwi.Variable('end-' + i)); // Ending character exclusive
+    const jVars = japanese.map((c, i) => ({
+        jIndex: i,
+        jChr: c,
+        jIsKanji: isKanji(c),
+        jIsKana: isKana(c),
+        hStart: <kiwi.Variable> new kiwi.Variable('start-' + i), // Starting character inclusive
+        hEnd: <kiwi.Variable> new kiwi.Variable('end-' + i) // Ending character exclusive
+    }));
+
     const kIndexesToAvoidEndingOn = getAllIndexes(kana, attachToPrecedingCharacter);
-    
-    const lastEndVar = endVars[endVars.length - 1];
+    const lastEndVar = jVars[jVars.length - 1].hEnd;
     solver.createConstraint(lastEndVar, kiwi.Operator.Le, kana.length, kiwi.Strength.required);
     solver.createConstraint(lastEndVar, kiwi.Operator.Ge, kana.length - maxUnmatched, kiwi.Strength.strong);
     solver.createConstraint(lastEndVar, kiwi.Operator.Eq, kana.length, kiwi.Strength.medium);
 
     let prevEnd: kiwi.Variable | null = null;
-    startVars.forEach((s, i) => {
-        const e: kiwi.Variable = endVars[i];
-        const jChr = japanese[i];
-        const jIsKanji = isKanji(jChr);
-        const jIsKana = isKana(jChr);
+    jVars.forEach((j, i) => {
+        const s: kiwi.Variable = j.hStart;
+        const e: kiwi.Variable = j.hEnd;
+        const jChr = j.jChr;
+        const jIsKanji = j.jIsKanji;
+        const jIsKana = j.jIsKana;
         let minLength = 0;
         if (jIsKanji || jIsKana) {
             minLength = 1;
@@ -81,18 +88,20 @@ export const MatchFuriganaForLine = (japaneseStr: string, kanaStr: string) => {
     });
     
     solver.updateVariables();
-    return startVars.map((s, i) => {
-        const e = endVars[i];
+    return jVars.map((j, i) => {
+        const s = j.hStart;
+        const e = j.hEnd;
         const correspondingKana = kanaStr.substring(s.value(), e.value());
-        const nextStart = (startVars[i + 1] || e).value();
+        const nextJVar = jVars[j.jIndex + 1];
+        const nextStart = (nextJVar && nextJVar.hStart || e).value();
         const trailingUnmatched = kanaStr.substring(e.value(), nextStart);
-        const shouldDisplay = correspondingKana.length > 0 && isKanji(japanese[i]);
+        const shouldDisplay = correspondingKana.length > 0 && j.jIsKanji;
         return {
-            japanese: japanese[i],
+            japanese: j.jChr,
             kana: correspondingKana,
             trailingUnmatched: trailingUnmatched,
             shouldDisplay: shouldDisplay,
-            shouldDisplayDebug: shouldDisplay || isKana(japanese[i]) && toHiragana(japanese[i]) !== toHiragana(correspondingKana),
+            shouldDisplayDebug: shouldDisplay || j.jIsKana && toHiragana(j.jChr) !== toHiragana(correspondingKana),
             debug: s.value() + '-' + e.value()
         };
     });
