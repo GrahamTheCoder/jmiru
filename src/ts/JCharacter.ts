@@ -47,12 +47,21 @@ export class JCharacter {
         const e: kiwi.Variable = this.hEnd;
 
         if (this.jIsKanji) {
+            // This is backwards for what's wanted here and totally broken anyway, but it's just to remind me of the idea of creating an expression that can AND and OR things
+            let startExpression: kiwi.Expression = new kiwi.Expression(0);
+            let endExpression: kiwi.Expression = new kiwi.Expression(0);
             kIndexesToAvoidEndingOn.forEach(kIndex => {
-                // create(0, 0, 1, 0.9) TODO: Fix this - it isn't playing well with the average kana or unmatched rule
-                const avoidSmallKanaStrength = kiwi.Strength.strong;
-                this.notEqual(solver, s, kIndex, avoidSmallKanaStrength);
-                this.notEqual(solver, e, kIndex, avoidSmallKanaStrength);
+                const zeroIfMatched = (v: kiwi.Variable) => new kiwi.Expression(1).minus(v.plus(1).divide(kIndex + 1));
+                const minusTenThousandIfMatchedStart = zeroIfMatched(this.hStart).multiply(zeroIfMatched(this.hStart)).multiply(10000).minus(10000);
+                const minusTenThousandIfMatchedEnd = zeroIfMatched(this.hEnd).multiply(zeroIfMatched(this.hEnd)).multiply(10000).minus(10000);
+                startExpression = startExpression.plus(minusTenThousandIfMatchedStart);
+                endExpression = endExpression.plus(minusTenThousandIfMatchedEnd);
             });            
+            
+            const avoidSmallKanaStrength = kiwi.Strength.required;
+            solver.createConstraint(startExpression, kiwi.Operator.Le, -100000, avoidSmallKanaStrength); 
+            solver.createConstraint(endExpression, kiwi.Operator.Le, -100000, avoidSmallKanaStrength); 
+            
         } else {
             const asHiragana = toHiragana(this.jChr);
             let firstIndex: number | null = null;
