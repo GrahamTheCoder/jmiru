@@ -23,6 +23,7 @@
         "@types/react": ">=16.0.7",
         "@types/react-dom": ">=15.5.5",
         "tslint": ">=5.7.0",
+        "typescript": ">=3.9.10",
         "typescript-formatter": ">=6.0.0"
     },
     "lint-staged": {
