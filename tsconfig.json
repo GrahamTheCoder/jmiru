@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
+    "baseUrl": "jmiru",
     "outDir": "build/dist",
     "module": "esnext",
     "target": "es5",
