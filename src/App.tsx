@@ -12,9 +12,9 @@ class App extends React.Component<{}, AppState> {
   constructor(props: {}) {
     super(props);
     this.state = {
-      MixedInput: 'C     F     G\nここで書きてください\nkoko de kakite kudasai\nwrite here please',
+      MixedInput: 'C     F     G\n\n\nここで書きてください\n\n\nkoko de kakite kudasai\n\n\nwrite here please. Leave two blank lines between different input types',
       OutputContent: '',
-      ChunkDivider: '\n\n' // Divider in line by line formats (e.g. romaji-lines, double-newline-divider, corresponding-english-lines)
+      ChunkDivider: '\n\n\n' // Divider in line by line formats (e.g. romaji-lines, triple-newline-divider, corresponding-english-lines)
     };
     this.handleMixedInputChanged = this.handleMixedInputChanged.bind(this);
     this.handleGenerateClicked = this.handleGenerateClicked.bind(this);
