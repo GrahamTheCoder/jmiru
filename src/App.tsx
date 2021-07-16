@@ -32,7 +32,8 @@ class App extends React.Component<{}, AppState> {
   }
 
   handleGenerateClicked() {
-    const outputContent = getHtmlFormattedOutput([this.state.MixedInput, this.state.MixedInput2]);
+    const inputs = this.state.MixedInput.split(this.state.ChunkDivider).concat(this.state.MixedInput2.split(this.state.ChunkDivider));
+    const outputContent = getHtmlFormattedOutput(inputs);
     this.setState({ OutputContent: outputContent });
   }
 
